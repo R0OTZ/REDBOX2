@@ -247,188 +247,45 @@ createAdvancedButton("AIMBOT", "Advanced targeting system", 1, function()
 end)
 
 createAdvancedButton("FULLBRIGHT", "Enhanced visibility mode", 2, function()
-    local success, err = pcall(function()
-        loadstring(game:HttpGet(('https://raw.githubusercontent.com/R0OTZ/Stop/refs/heads/main/fullbright'),true))()
-    end)
-    if success then
-        print("✓ Fullbright mode activated")
-    else
-        warn("✗ Fullbright failed to load: " .. tostring(err))
-    end
-end)
-
-createAdvancedButton("ESP", "Enemy tracking overlay", 3, function()
-    local Camera = workspace.CurrentCamera
-    
-    local ESP = {
-        Enabled = true,
-        ShowTeamColor = true,
-        ShowHealthBar = true,
-        TextSize = 14,
-        BoxThickness = 2,
-        BoxTransparency = 0.5,
-        TextTransparency = 0,
-        HealthBarThickness = 2,
-        HealthBarWidth = 50,
-        HealthBarHeight = 5,
-        MaxDistance = 5000,
-    }
-    
-    local ESPObjects = {}
-    
-    local function CreateESPForPlayer(player)
-        if player == LocalPlayer then return end
-        
-        local espObject = {}
-        
-        espObject.Box = Drawing.new("Square")
-        espObject.Box.Visible = false
-        espObject.Box.Thickness = ESP.BoxThickness
-        espObject.Box.Transparency = ESP.BoxTransparency
-        espObject.Box.Filled = false
-        
-        espObject.Text = Drawing.new("Text")
-        espObject.Text.Visible = false
-        espObject.Text.Size = ESP.TextSize
-        espObject.Text.Center = true
-        espObject.Text.Outline = true
-        espObject.Text.Transparency = ESP.TextTransparency
-        
-        espObject.HealthBG = Drawing.new("Square")
-        espObject.HealthBG.Visible = false
-        espObject.HealthBG.Thickness = ESP.HealthBarThickness
-        espObject.HealthBG.Filled = true
-        espObject.HealthBG.Color = Color3.fromRGB(100, 100, 100)
-        espObject.HealthBG.Transparency = 0.7
-        
-        espObject.HealthBar = Drawing.new("Square")
-        espObject.HealthBar.Visible = false
-        espObject.HealthBar.Thickness = ESP.HealthBarThickness
-        espObject.HealthBar.Filled = true
-        espObject.HealthBar.Transparency = 0.7
-        
-        ESPObjects[player] = espObject
-        
-        player.AncestryChanged:Connect(function()
-            if not player:IsDescendantOf(game) then
-                if ESPObjects[player] then
-                    for _, object in pairs(ESPObjects[player]) do
-                        object:Remove()
-                    end
-                    ESPObjects[player] = nil
+    pcall(function()
+        local lighting = game:GetService("Lighting")
+        lighting.Ambient = Color3.fromRGB(255, 255, 255)
+        lighting.Brightness = 1
+        lighting.FogEnd = 1e10
+        for i, v in pairs(lighting:GetDescendants()) do
+            if v:IsA("BloomEffect") or v:IsA("BlurEffect") or v:IsA("ColorCorrectionEffect") or v:IsA("SunRaysEffect") then
+                v.Enabled = false
+            end
+        end
+        lighting.Changed:Connect(function()
+            lighting.Ambient = Color3.fromRGB(255, 255, 255)
+            lighting.Brightness = 1
+            lighting.FogEnd = 1e10
+        end)
+        spawn(function()
+            local character = game:GetService("Players").LocalPlayer.Character
+            while wait() do
+                repeat wait() until character ~= nil
+                if not character.HumanoidRootPart:FindFirstChildWhichIsA("PointLight") then
+                    local headlight = Instance.new("PointLight", character.HumanoidRootPart)
+                    headlight.Brightness = 1
+                    headlight.Range = 60
                 end
             end
         end)
-    end
-    
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            CreateESPForPlayer(player)
-        end
-    end
-    
-    Players.PlayerAdded:Connect(CreateESPForPlayer)
-    
-    Players.PlayerRemoving:Connect(function(player)
-        if ESPObjects[player] then
-            for _, object in pairs(ESPObjects[player]) do
-                object:Remove()
-            end
-            ESPObjects[player] = nil
-        end
+        print("✓ Fullbright mode activated")
     end)
-    
-    local function GetPlayerTeamColor(player)
-        if player.Team then
-            return player.TeamColor.Color
-        end
-        return Color3.fromRGB(255, 255, 255)
-    end
-    
-    local function GetHealthColor(health, maxHealth)
-        local healthPercent = health / maxHealth
-        
-        local r = math.clamp(2 * (1 - healthPercent), 0, 1)
-        local g = math.clamp(2 * healthPercent, 0, 1)
-        
-        return Color3.new(r, g, 0)
-    end
-    
-    RunService.RenderStepped:Connect(function()
-        if not ESP.Enabled then
-            for _, espObject in pairs(ESPObjects) do
-                for _, drawing in pairs(espObject) do
-                    drawing.Visible = false
-                end
-            end
-            return
-        end
-        
-        for player, espObject in pairs(ESPObjects) do
-            local character = player.Character
-            if not character or not character:FindFirstChild("HumanoidRootPart") or not character:FindFirstChild("Humanoid") then
-                for _, drawing in pairs(espObject) do
-                    drawing.Visible = false
-                end
-                continue
-            end
-            
-            local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-            local humanoid = character:FindFirstChild("Humanoid")
-            
-            local health = humanoid.Health
-            local maxHealth = humanoid.MaxHealth
-            
-            local vector, onScreen = Camera:WorldToViewportPoint(humanoidRootPart.Position)
-            local distance = (humanoidRootPart.Position - Camera.CFrame.Position).Magnitude
-            
-            if onScreen and distance <= ESP.MaxDistance then
-                local topPosition = humanoidRootPart.Position + Vector3.new(0, 3, 0)
-                local bottomPosition = humanoidRootPart.Position - Vector3.new(0, 3, 0)
-                
-                local topVector = Camera:WorldToViewportPoint(topPosition)
-                local bottomVector = Camera:WorldToViewportPoint(bottomPosition)
-                
-                local height = math.abs(topVector.Y - bottomVector.Y)
-                local width = height * 0.6
-                
-                local boxPosition = Vector2.new(vector.X - width / 2, vector.Y - height / 2)
-                local boxSize = Vector2.new(width, height)
-                
-                espObject.Box.Position = boxPosition
-                espObject.Box.Size = boxSize
-                espObject.Box.Color = GetPlayerTeamColor(player)
-                espObject.Box.Visible = true
-                
-                espObject.Text.Position = Vector2.new(vector.X, boxPosition.Y - 20)
-                espObject.Text.Text = string.format("%s [%.0f%%]", player.Name, (health / maxHealth) * 100)
-                espObject.Text.Color = GetPlayerTeamColor(player)
-                espObject.Text.Visible = true
-                
-                espObject.HealthBG.Position = Vector2.new(vector.X - ESP.HealthBarWidth / 2, boxPosition.Y - 10)
-                espObject.HealthBG.Size = Vector2.new(ESP.HealthBarWidth, ESP.HealthBarHeight)
-                espObject.HealthBG.Visible = ESP.ShowHealthBar
-                
-                local healthPercent = health / maxHealth
-                espObject.HealthBar.Position = Vector2.new(vector.X - ESP.HealthBarWidth / 2, boxPosition.Y - 10)
-                espObject.HealthBar.Size = Vector2.new(ESP.HealthBarWidth * healthPercent, ESP.HealthBarHeight)
-                espObject.HealthBar.Color = GetHealthColor(health, maxHealth)
-                espObject.HealthBar.Visible = ESP.ShowHealthBar
-            else
-                for _, drawing in pairs(espObject) do
-                    drawing.Visible = false
-                end
-            end
-        end
+end)
+
+createAdvancedButton("ESP", "Enemy tracking overlay", 3, function()
+    local success, err = pcall(function()
+        loadstring(game:HttpGet(('https://raw.githubusercontent.com/R0OTZ/Stop/refs/heads/main/FIXEDESP'),true))()
     end)
-    
-    UserInputService.InputBegan:Connect(function(input)
-        if input.KeyCode == Enum.KeyCode.RightAlt then
-            ESP.Enabled = not ESP.Enabled
-        end
-    end)
-    
-    print("✓ ESP system activated")
+    if success then
+        print("✓ ESP system activated")
+    else
+        warn("✗ ESP failed to load: " .. tostring(err))
+    end
 end)
 
 createAdvancedButton("AMMO", "Unlimited ammunition", 4, function()
